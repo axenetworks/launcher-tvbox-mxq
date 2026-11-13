@@ -21,8 +21,10 @@ import android.graphics.Path;
 import android.graphics.RectF;
 import android.graphics.Shader;
 import android.graphics.Typeface;
+import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
+import android.graphics.drawable.StateListDrawable;
 import android.media.MediaMetadata;
 import android.media.session.MediaController;
 import android.media.session.MediaSessionManager;
@@ -91,10 +93,10 @@ public class MainActivity extends Activity {
         String pkg;          // null = espaco vazio
         Intent intent;
         Bitmap bitmap;
-        int cor = 0xFF262626;
+        String nome;
         FrameLayout tile;
         ImageView img;
-        TextView mais;
+        TextView mais, rotulo;
     }
 
     private final List<Item> items = new ArrayList<Item>();
@@ -112,7 +114,7 @@ public class MainActivity extends Activity {
     private boolean primeiraCarga = true, modoEscolher = false;
     private long ultimoClima = 0;
     private SharedPreferences prefs;
-    private int slotAlvo = -1, focoPendente = -1, selecionado = SLOTS / 2;
+    private int slotAlvo = -1, focoPendente = -1;
 
     // musica
     private MediaSessionManager msm;
@@ -192,7 +194,7 @@ public class MainActivity extends Activity {
         data.setTypeface(Typeface.create("sans-serif-light", Typeface.NORMAL));
         data.setIncludeFontPadding(false);
         FrameLayout.LayoutParams ld = new FrameLayout.LayoutParams(-2, -2);
-        ld.leftMargin = px(75);
+        ld.leftMargin = px(70);
         ld.topMargin = px(168);
         homeLayer.addView(data, ld);
 
@@ -211,7 +213,7 @@ public class MainActivity extends Activity {
         climaBox.addView(col);
         climaBox.setVisibility(View.INVISIBLE);
         FrameLayout.LayoutParams lc = new FrameLayout.LayoutParams(-2, -2, Gravity.TOP | Gravity.RIGHT);
-        lc.rightMargin = px(75);
+        lc.rightMargin = px(80);
         lc.topMargin = px(62);
         homeLayer.addView(climaBox, lc);
 
@@ -220,10 +222,9 @@ public class MainActivity extends Activity {
         linha.setOrientation(LinearLayout.HORIZONTAL);
         linha.setGravity(Gravity.CENTER_VERTICAL);
         montarDock();
-        FrameLayout.LayoutParams ll = new FrameLayout.LayoutParams(-2, px(448), Gravity.TOP | Gravity.CENTER_HORIZONTAL);
-        ll.topMargin = px(323);
+        FrameLayout.LayoutParams ll = new FrameLayout.LayoutParams(-2, px(400), Gravity.TOP | Gravity.CENTER_HORIZONTAL);
+        ll.topMargin = px(340);
         homeLayer.addView(linha, ll);
-        atualizarTamanhos();
 
         // musica tocando (canto inferior esquerdo)
         musicaBox = new LinearLayout(this);
@@ -249,7 +250,7 @@ public class MainActivity extends Activity {
         musicaBox.addView(tx);
         musicaBox.setVisibility(View.GONE);
         FrameLayout.LayoutParams lm = new FrameLayout.LayoutParams(-2, -2, Gravity.BOTTOM | Gravity.LEFT);
-        lm.leftMargin = px(75);
+        lm.leftMargin = px(70);
         lm.bottomMargin = px(76);
         homeLayer.addView(musicaBox, lm);
 
@@ -275,7 +276,7 @@ public class MainActivity extends Activity {
         lb.leftMargin = px(10);
         pill.addView(btnConfig, lb);
         FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(-2, -2, Gravity.BOTTOM | Gravity.RIGHT);
-        lp.rightMargin = px(77);
+        lp.rightMargin = px(82);
         lp.bottomMargin = px(77);
         homeLayer.addView(pill, lp);
     }
@@ -286,23 +287,6 @@ public class MainActivity extends Activity {
         if (i == null) i = pm.getLaunchIntentForPackage(PACOTE_CONFIG);
         if (i == null) i = new Intent(Settings.ACTION_SETTINGS);
         abrir(i);
-    }
-
-    /** Espaco selecionado = grande; vizinho = medio; os demais = pequenos. */
-    private void atualizarTamanhos() {
-        for (int i = 0; i < favs.size(); i++) {
-            int d = Math.abs(i - selecionado);
-            int w = d == 0 ? 374 : 284;
-            int h = d == 0 ? 448 : (d == 1 ? 348 : 261);
-            View t = favs.get(i).tile;
-            LinearLayout.LayoutParams lp = (LinearLayout.LayoutParams) t.getLayoutParams();
-            int nw = px(w), nh = px(h);
-            if (lp.width != nw || lp.height != nh) {
-                lp.width = nw;
-                lp.height = nh;
-                t.setLayoutParams(lp);
-            }
-        }
     }
 
     // ------------------------------------------------------------ favoritos (5 espacos livres)
@@ -355,30 +339,57 @@ public class MainActivity extends Activity {
         boolean cheio = f.pkg != null && f.intent != null;
         f.img.setImageBitmap(cheio ? f.bitmap : null);
         f.mais.setVisibility(cheio ? View.GONE : View.VISIBLE);
-        GradientDrawable bg = new GradientDrawable();
-        bg.setColor(cheio ? f.cor : 0xFF222222);
-        bg.setCornerRadius(px(26));
-        f.tile.setBackgroundDrawable(bg);
+        f.rotulo.setText(cheio && f.nome != null ? f.nome : "");
     }
 
+    /** Card com degrade, icone, nome embaixo e moldura branca quando selecionado. */
     private void criarTile(final Fav f) {
         f.tile = new FrameLayout(this);
         f.tile.setFocusable(true);
         f.tile.setClickable(true);
+
+        View card = new View(this);
+        GradientDrawable gd = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
+                new int[]{ 0xFF242424, 0xFF000000 });
+        gd.setCornerRadius(px(40));
+        card.setBackgroundDrawable(gd);
+        FrameLayout.LayoutParams lcard = new FrameLayout.LayoutParams(px(259), px(340));
+        lcard.leftMargin = px(10);
+        lcard.topMargin = px(10);
+        f.tile.addView(card, lcard);
+
         f.img = new ImageView(this);
         f.img.setScaleType(ImageView.ScaleType.FIT_CENTER);
-        f.tile.addView(f.img, new FrameLayout.LayoutParams(-1, -1));
-        f.mais = texto("+", 120, Color.WHITE, Typeface.BOLD);
+        FrameLayout.LayoutParams li = new FrameLayout.LayoutParams(px(140), px(140));
+        li.leftMargin = px(69);
+        li.topMargin = px(130);
+        f.tile.addView(f.img, li);
+
+        f.mais = texto("+", 110, Color.WHITE, Typeface.BOLD);
         f.mais.setGravity(Gravity.CENTER);
-        f.tile.addView(f.mais, new FrameLayout.LayoutParams(-1, -1));
-        f.tile.setOnFocusChangeListener(new View.OnFocusChangeListener() {
-            @Override public void onFocusChange(View v, boolean tem) {
-                if (tem) {
-                    selecionado = favs.indexOf(f);
-                    atualizarTamanhos();
-                }
-            }
-        });
+        FrameLayout.LayoutParams lm = new FrameLayout.LayoutParams(px(259), px(140));
+        lm.leftMargin = px(10);
+        lm.topMargin = px(130);
+        f.tile.addView(f.mais, lm);
+
+        f.rotulo = texto("", 34, Color.WHITE, Typeface.NORMAL);
+        f.rotulo.setGravity(Gravity.CENTER);
+        f.rotulo.setSingleLine(true);
+        f.rotulo.setEllipsize(TextUtils.TruncateAt.END);
+        f.rotulo.setPadding(px(10), 0, px(10), 0);
+        FrameLayout.LayoutParams lr = new FrameLayout.LayoutParams(px(279), px(44));
+        lr.topMargin = px(330);
+        f.tile.addView(f.rotulo, lr);
+
+        StateListDrawable sl = new StateListDrawable();
+        GradientDrawable on = new GradientDrawable();
+        on.setColor(Color.TRANSPARENT);
+        on.setStroke(px(3), Color.WHITE);
+        on.setCornerRadius(px(46));
+        sl.addState(new int[]{ android.R.attr.state_focused }, on);
+        sl.addState(new int[]{}, new ColorDrawable(Color.TRANSPARENT));
+        f.tile.setForeground(sl);
+
         f.tile.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) {
                 if (f.pkg != null && f.intent != null) abrir(f.intent);
@@ -399,8 +410,8 @@ public class MainActivity extends Activity {
             Fav f = favs.get(i);
             criarTile(f);
             aplicarSlot(f);
-            LinearLayout.LayoutParams lt = new LinearLayout.LayoutParams(px(284), px(261));
-            lt.leftMargin = i == 0 ? 0 : px(45);
+            LinearLayout.LayoutParams lt = new LinearLayout.LayoutParams(px(279), px(400));
+            lt.leftMargin = i == 0 ? 0 : px(31);
             linha.addView(f.tile, lt);
         }
     }
@@ -418,6 +429,7 @@ public class MainActivity extends Activity {
         if (ja != null && favs.indexOf(ja) != idx) { toast("J\u00E1 est\u00E1 no dock"); return; }
         Fav f = favs.get(idx);
         f.pkg = pkg;
+        f.nome = null;
         f.intent = null;
         f.bitmap = null;
         aplicarSlot(f);
@@ -436,6 +448,7 @@ public class MainActivity extends Activity {
 
     private void removerFav(Fav f) {
         f.pkg = null;
+        f.nome = null;
         f.intent = null;
         f.bitmap = null;
         aplicarSlot(f);
@@ -451,7 +464,7 @@ public class MainActivity extends Activity {
         String p = f.pkg; f.pkg = b.pkg; b.pkg = p;
         Intent in = f.intent; f.intent = b.intent; b.intent = in;
         Bitmap bm = f.bitmap; f.bitmap = b.bitmap; b.bitmap = bm;
-        int cr = f.cor; f.cor = b.cor; b.cor = cr;
+        String nm = f.nome; f.nome = b.nome; b.nome = nm;
         aplicarSlot(f);
         aplicarSlot(b);
         salvarFavoritos();
@@ -711,7 +724,7 @@ public class MainActivity extends Activity {
 
                 final Bitmap[] fotos = new Bitmap[snap.size()];
                 final Intent[] intents = new Intent[snap.size()];
-                final int[] cores = new int[snap.size()];
+                final String[] nomes = new String[snap.size()];
                 for (int i = 0; i < snap.size(); i++) {
                     String p = pkgs[i];
                     if (p == null) continue;
@@ -719,9 +732,8 @@ public class MainActivity extends Activity {
                     if (li == null) li = pm.getLaunchIntentForPackage(p);
                     if (li != null) {
                         intents[i] = li;
-                        int[] cor = new int[1];
-                        fotos[i] = montarTile(pm, p, li, cor);
-                        cores[i] = cor[0];
+                        fotos[i] = montarTile(pm, p, li);
+                        nomes[i] = nomeDoApp(pm, p);
                     }
                 }
 
@@ -735,7 +747,7 @@ public class MainActivity extends Activity {
                             if (pkgs[i] == null ? f.pkg != null : !pkgs[i].equals(f.pkg)) continue;
                             f.intent = intents[i];
                             f.bitmap = fotos[i];
-                            if (intents[i] != null) f.cor = cores[i];
+                            f.nome = nomes[i];
                             aplicarSlot(f);
                         }
                         if (focoPendente >= 0) {
@@ -754,44 +766,25 @@ public class MainActivity extends Activity {
         }).start();
     }
 
-    /**
-     * Imagem do dock. Com banner: o banner inteiro (a cor de fundo do tile vem da borda do banner).
-     * Sem banner: icone do app + nome.
-     */
-    private Bitmap montarTile(PackageManager pm, String pkg, Intent launch, int[] cor) {
-        int bw = px(374);
-        cor[0] = 0xFF262626;
+    /** Icone do app para o card do dock. */
+    private Bitmap montarTile(PackageManager pm, String pkg, Intent launch) {
+        int s = px(140);
+        Bitmap b = Bitmap.createBitmap(s, s, Bitmap.Config.ARGB_8888);
         try {
-            Drawable d = null;
-            try { d = pm.getActivityBanner(launch); } catch (Exception ignored) { }
-            if (d == null) d = pm.getApplicationBanner(pkg);
-            if (d != null) {
-                int iw = d.getIntrinsicWidth(), ih = d.getIntrinsicHeight();
-                int bh = (iw > 0 && ih > 0) ? Math.max(1, bw * ih / iw) : bw * 9 / 16;
-                Bitmap b = Bitmap.createBitmap(bw, bh, Bitmap.Config.ARGB_8888);
-                d.setBounds(0, 0, bw, bh);
-                d.draw(new Canvas(b));
-                int amostra = b.getPixel(2, 2);
-                if (Color.alpha(amostra) > 250) cor[0] = amostra;
-                return b;
-            }
-            Bitmap b = Bitmap.createBitmap(bw, bw, Bitmap.Config.ARGB_8888);
-            Canvas c = new Canvas(b);
-            Drawable ic = pm.getApplicationIcon(pkg);
-            int s = px(150);
-            int l = (bw - s) / 2, t = px(70);
-            ic.setBounds(l, t, l + s, t + s);
-            ic.draw(c);
-            CharSequence nome = pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0));
-            TextPaint tp = new TextPaint(Paint.ANTI_ALIAS_FLAG);
-            tp.setColor(Color.WHITE);
-            tp.setTextSize(px(34));
-            tp.setTextAlign(Paint.Align.CENTER);
-            CharSequence txt = TextUtils.ellipsize(nome, tp, bw - px(40), TextUtils.TruncateAt.END);
-            c.drawText(txt.toString(), bw / 2f, px(300), tp);
-            return b;
+            Drawable ic = null;
+            try { ic = pm.getActivityIcon(launch); } catch (Exception ignored) { }
+            if (ic == null) ic = pm.getApplicationIcon(pkg);
+            ic.setBounds(0, 0, s, s);
+            ic.draw(new Canvas(b));
+        } catch (Exception ignored) { }
+        return b;
+    }
+
+    private String nomeDoApp(PackageManager pm, String pkg) {
+        try {
+            return String.valueOf(pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)));
         } catch (Exception e) {
-            return Bitmap.createBitmap(bw, bw, Bitmap.Config.ARGB_8888);
+            return pkg;
         }
     }
 

@@ -69,7 +69,7 @@ public class MainActivity extends Activity {
     // ===================== CONFIGURACOES (edite aqui) =====================
     private static final String FAVORITOS_PADRAO =
             "com.google.android.youtube.tv|com.google.android.youtube.googletv,"
-            + "com.global.unitviptv,com.spotify.music";
+            + "com.spotify.music";
     private static final int SLOTS = 5;
     private static final String[] HIDDEN = {
             "com.droidlogic.mboxlauncher",

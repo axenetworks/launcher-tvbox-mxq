@@ -80,8 +80,8 @@ public class MainActivity extends Activity {
     };
     private static final String PACOTE_CONFIG = "com.android.tv.settings";
     private static final boolean MOSTRAR_CLIMA = true;
-    private static final double LATITUDE = -8.59;
-    private static final double LONGITUDE = -35.11;
+    private static final double LATITUDE = -19.41;
+    private static final double LONGITUDE = -42.41;
     private static final long CLIMA_INTERVALO = 30L * 60L * 1000L;
     private static final int COLUNAS = 6;
     private static final int ICON_PX = 96;
